@@ -11,8 +11,12 @@
     </Configurations>
     <Files>
         <Filter Name="Source Files">
-            <File RelativePath="main.c" />
+            <File RelativePath="main.c">
+                <Header RelativePath="COMMON.H" />
+                <Header RelativePath="C:\KEIL\C51\INC\REG52.H" />
+            </File>
             <File RelativePath="common.h" />
+            <File RelativePath="MBI5168.c" />
         </Filter>
     </Files>
 </TKStudioProject>
