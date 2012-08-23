@@ -13,10 +13,16 @@
         <Filter Name="Source Files">
             <File RelativePath="main.c">
                 <Header RelativePath="COMMON.H" />
-                <Header RelativePath="C:\KEIL\C51\INC\REG52.H" />
+                <Header RelativePath="D:\KEIL\C51\INC\REG52.H" />
+                <Header RelativePath="D:\KEIL\C51\INC\INTRINS.H" />
             </File>
             <File RelativePath="common.h" />
-            <File RelativePath="MBI5168.c" />
+            <File RelativePath="MBI5168.c">
+                <Header RelativePath="COMMON.H" />
+                <Header RelativePath="D:\KEIL\C51\INC\REG52.H" />
+                <Header RelativePath="D:\KEIL\C51\INC\INTRINS.H" />
+            </File>
+            <File RelativePath="D:\TKStudio\Examples\KeilC51\c51\MEASURE\at93c46.c" />
         </Filter>
     </Files>
 </TKStudioProject>
