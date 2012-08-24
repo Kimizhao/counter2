@@ -1,190 +1,386 @@
 #include "common.h"
+#include "at93c66.h"
 
-sbit CS=P1^0;
-sbit SK=P1^1;
-sbit DI=P1^2;
-sbit DO=P1^3;
+#include <stdio.h>
 
-void delay(void)
+sbit  P1_0  =  P1^0;	 //SCS引脚
+sbit  P1_1  =  P1^1;	 //SCK引脚
+sbit  P1_2  =  P1^2;	 //MOSI引脚
+sbit  P1_3  =  P1^3;	 //MISO引脚
+
+#define AT93CXX_SCS_H     (P1_0 = 1)
+#define AT93CXX_SCS_L     (P1_0 = 0)
+
+#define AT93CXX_SCK_H      (P1_1 = 1)
+#define AT93CXX_SCK_L      (P1_1 = 0)
+
+#define AT93CXX_MOSI_H     (P1_2 = 1)
+#define AT93CXX_MOSI_L     (P1_2 = 0)
+
+#define AT93CXX_MISO       (P1_3)
+
+
+
+//*************************************************
+//函数名：void AT93CXX_SPI_PORT_INIT( void )
+//输入参数：无
+//输出参数：无
+//功能：初始化AT93CXX端口
+//*************************************************
+void AT93CXX_SPI_PORT_INIT( void )
 {
-    uint i;
-	for(i=0;i<60000;i++);
+ AT93CXX_SCS_L;
+ AT93CXX_SCS_L;
+ AT93CXX_SCK_L;
+ AT93CXX_MOSI_L;
 }
 
-/*注意：由于写入AT93C46的地址只为7位，而我们传送到AT93C46的地址为8位16进制数，故需先
-将最高位移出，再将其他7位传送到AT93C46中*/
-void shift1(uchar num,uchar sdata)
+
+
+//*********************************************************
+//函数名：void AT93CXX_SPI_Send_Word(unsigned short dat)
+//输入参数：发送的16bit数据
+//输出参数：无
+//功能：通过SPI接口发送16bit数据
+//*********************************************************
+void AT93CXX_SPI_Send_Word(unsigned short dat)
 {
-    uchar i;
-	for(i=0;i<num;i++)
-	{
-	    SK=0;
-		sdata<<=1;
-		DI=CY;
-		SK=1;
-		// sdata<<=1;
-		// DI=CY;
-		// SK=1;
-		// SK=0;
-	}
+  unsigned short i;
+  for(i=0;i!=16;i++)
+  {
+   if(dat&0x8000) AT93CXX_MOSI_H;
+   else  AT93CXX_MOSI_L;
+
+   AT93CXX_SCK_L;
+   AT93CXX_SCK_H;
+   AT93CXX_SCK_L;
+   dat<<=1;
+  
+  }
+
 }
 
-/*由于要传送的地址为8位16进制数，而AT93C46的地址只为7位，故需先将sdata的最高位移出，
-再传送到AT93C46中*/
-void shift2(uchar num,uchar sdata)
+
+
+//*********************************************************
+//函数名：void AT93CXX_SPI_Send_Byte(unsigned char dat)
+//输入参数：发送的8bit数据
+//输出参数：无
+//功能：通过SPI接口发送8bit数据
+//*********************************************************
+void AT93CXX_SPI_Send_Byte(unsigned char dat)
 {
-    uchar i;
-	sdata<<=1;
-	for(i=0;i<num;i++)
-	{
-	    SK=0;
-		sdata<<=1;
-		DI=CY;
-		SK=1;
-		// sdata<<=1;
-		// DI=CY;
-		// SK=1;
-		// SK=0;
-	}
-}
-void write_en(void)
-{
-    uchar sb_op=0x80,add=0xc0;
-    CS=0;
-	SK=0;//
-    CS=1;
-    shift1(3,sb_op);
-	shift1(7,add);
-	CS=0;
-	CS=1;
+  unsigned short i;
+  for(i=0;i!=8;i++)
+  {
+   if(dat&0x80) AT93CXX_MOSI_H;
+   else  AT93CXX_MOSI_L;
+
+   AT93CXX_SCK_L;
+   AT93CXX_SCK_H;
+   AT93CXX_SCK_L;
+   dat<<=1;
+  
+  }
+
 }
 
-void erase_all(void)
-{
-    uchar sb_op=0x80,add=0x80;
-    CS=0;
-    CS=1;
-	shift1(3,sb_op);
-	shift1(7,add);
-	CS=0;
-	CS=1;
-	while(DO==0);
-} 
 
-uchar read(uchar rd_add)
+//*********************************************************
+//函数名：unsigned short AT93CXX_SPI_Rec_Word( )
+//输入参数：无
+//输出参数：16bit数据
+//功能：通过SPI接口接收16bit数据
+//*********************************************************
+unsigned short AT93CXX_SPI_Rec_Word( )
 {
-    uchar i,sb_op=0xc0,rd_data=0x00;
-	CS=0;
-    CS=1;
-	shift1(3,sb_op);
-	shift2(7,rd_add);
-//	SK=0;   //产生一时钟上升沿，将虚拟位0读出
-//	SK=1;  	//（虚拟位可能在写A0的时钟上升沿中产生，而不是在写A0后的时钟上升沿产生,所以不用将虚拟位读出)           
-	for(i=0;i<8;i++)
-	{	rd_data<<=1;
-	    SK=0;
-		SK=1;
-		CY=DO;
-		if(CY==1)rd_data|=0x01;
-		else rd_data&=0xfe;	
-	}
-	//SK=0;
-	CS=0;
-	CS=1;
-	return(rd_data);
+  unsigned short dat;
+  unsigned char i;
+
+  for(i=0;i!=16;i++)
+  {
+   dat<<=1;
+   AT93CXX_SCK_L;
+   AT93CXX_SCK_H;    
+   if(AT93CXX_MISO) dat++;
+   AT93CXX_SCK_L;
+  
+  }
+  return dat;
 }
 
-void write(uchar wr_add,uchar wr_data)
-{
-	uchar sb_op=0xa0;
-	CS=0;
-    CS=1;
-	shift1(3,sb_op);
-	shift2(7,wr_add);
-	shift1(8,wr_data);
-	CS=0;
-	CS=1;
-	while(DO==0);
-} 
 
-void erase(uchar er_add)
+
+//*********************************************************
+//函数名：unsigned short AT93CXX_SPI_Rec_Byte( )
+//输入参数：无
+//输出参数：8bit数据
+//功能：通过SPI接口接收8bit数据
+//*********************************************************
+unsigned short AT93CXX_SPI_Rec_Byte( )
 {
-    uchar sb_op=0xe0;
-	CS=0;
-	CS=1;
-	shift1(3,sb_op);
-	shift2(7,er_add);
-	CS=0;
-	CS=1;
-	while(DO==0);
+  unsigned char dat;
+  unsigned char i;
+
+  for(i=0;i!=8;i++)
+  {
+   dat<<=1;
+   AT93CXX_SCK_L;
+   AT93CXX_SCK_H;    
+   if(AT93CXX_MISO) dat++;
+   AT93CXX_SCK_L;  
+  }
+  return dat;
 }
 
-void wr_all(uchar wr_data)
+
+
+
+//****************************************************************
+//函数名：unsigned short AT93CXX_Read_Data(unsigned short addr)
+//输入参数：地址
+//输出参数：16bit数据
+//功能：读取AT93CXX指定地址的数据
+//****************************************************************
+unsigned short AT93CXX_Read_Data(unsigned short addr)
 {
-    uchar sb_op=0x80,wr_add=0x40;
-	CS=0;
-	CS=1;
-	shift1(3,sb_op);
-	shift1(7,wr_add);
-	shift1(8,wr_data);
-	CS=0;
-	CS=1;
-	while(DO==0);
+  unsigned short address;
+
+  AT93CXX_SCS_H;
+
+
+#if MEM_ORG  
+//16位数据存储
+  address = ((unsigned short)(AT93CXX_READ|0x04)<<8) | addr;
+#else
+//8位数据存储
+  address = ((unsigned short)(AT93CXX_READ|0x04)<<9) | addr;
+#endif
+
+  AT93CXX_SPI_Send_Word(address);
+
+#if MEM_ORG  
+//16位数据存储
+   address = AT93CXX_SPI_Rec_Word();
+#else 
+//8位数据存储
+   address = AT93CXX_SPI_Rec_Byte();
+#endif
+
+
+   AT93CXX_SCS_L;
+
+   return address;
 }
 
-void ew_disable(void)
+
+
+
+
+//****************************************************************
+//函数名：void  AT93CXX_EN_Write( void )
+//输入参数：无
+//输出参数：无
+//功能：使能写操作和擦除操作
+//****************************************************************
+void  AT93CXX_EN_Write( void )
 {
-    uchar sb_op=0x80,add=0x00;
-	CS=0;
-	CS=1;
-	shift1(3,sb_op);
-	shift1(7,add);
-	CS=0;
-	delay();
+  unsigned short address;
+
+  AT93CXX_SCS_H;
+
+#if MEM_ORG  
+//16位数据模式
+  address = ((unsigned short)(AT93CXX_EWEN|0x04)<<8) | 0xc0;
+#else 
+//8位数据模式
+  address = ((unsigned short)(AT93CXX_EWEN|0x04)<<9) | 0x180;
+#endif
+  AT93CXX_SPI_Send_Word(address);
+
+  AT93CXX_SCS_L;
+
 }
 
-// void main(void)
-// {	
-   	// uchar address=0x00,i;
-	// uchar data1[]={0xfe,0xfd,0xfb,0xf7};
-    // write_en();
-	// write(0x00,data1[0]);
-	// P1=data1[0];
-	// delay();
-	// write(0x01,data1[1]);
-	// P1=data1[1];
-	// delay();
-	// write(0x02,data1[2]);
-	// P1=data1[2];
-	// delay();
-	// write(0x03,data1[3]);
-	// P1=data1[3];
-	// delay();
-
-	// /*
-	// for(i=0;i<4;i++)
-	// {  P1=data1[i];
-	   // write(address,data1[i]);
-	   // address++;
-	   // delay();
-	// } */
-   	// P1=read(0x00);
-	// delay();
-	// P1=read(0x01);
-	// delay();
-	// P1=read(0x02);
-	// delay();
-	// P1=read(0x03);
-	// delay();
 
 
 
-// /*	address=0x00;
-	// for(i=0;i<4;i++)
-	// {
-	   // P1=read(address);
-	   // delay(); 
-	   // address++;
-	 // } */
-	// while(1);
-// }
+//****************************************************************
+//函数名：void  AT93CXX_Erase_Write_Disable( void )
+//输入参数：无
+//输出参数：无
+//功能：禁止写操作和擦除操作
+//****************************************************************
+void  AT93CXX_Erase_Write_Disable( void )
+{
+  unsigned short address;
+
+  AT93CXX_SCS_H;
+
+#if MEM_ORG  
+//16位数据存储
+  address = ((unsigned short)(AT93CXX_EWDS|0x04)<<8);
+
+#else
+//8位数据存储 
+  address = ((unsigned short)(AT93CXX_EWDS|0x04)<<9);
+
+#endif
+  AT93CXX_SPI_Send_Word(address);
+
+  AT93CXX_SCS_L;
+}
+
+
+
+
+//**************************************************************************
+//函数名：void  AT93CXX_Write_Data( unsigned short addr,unsigned short dat )
+//输入参数：地址，数据
+//输出参数：无
+//功能：往指定地址写入数据
+//****************************************************************************
+void  AT93CXX_Write_Data( unsigned short addr,unsigned short dat )
+{
+  unsigned short address;
+
+  AT93CXX_SCS_H;
+
+#if MEM_ORG  
+//16位数据存储
+  address = ((unsigned short)(AT93CXX_WRITE|0x04)<<8) | addr;
+#else
+//8位数据存储 
+  address = ((unsigned short)(AT93CXX_WRITE|0x04)<<9)| addr;
+#endif
+  
+  AT93CXX_SPI_Send_Word(address);
+
+#if MEM_ORG  
+//16位数据存储
+    AT93CXX_SPI_Send_Word(dat);
+#else 
+//8位数据存储
+    AT93CXX_SPI_Send_Byte((unsigned char)dat);
+#endif
+    AT93CXX_SCS_L;
+    
+	AT93CXX_SCS_H;
+    while(AT93CXX_MISO == 0); //等待写完成
+    AT93CXX_SCS_L;
+
+
+}
+
+
+
+
+//**************************************************************************
+//函数名：void AT93CXX_Write_All( unsigned short dat)
+//输入参数：数据
+//输出参数：无
+//功能：往所有地址写入固定数据
+//****************************************************************************
+void AT93CXX_Write_All( unsigned short dat)
+{
+  unsigned short address;
+  AT93CXX_SCS_H;
+
+#if MEM_ORG  
+//16位数据存储
+  address = ((unsigned short)(AT93CXX_WRAL|0x04)<<8)|0x40;
+#else
+//8位数据存储 
+  address = ((unsigned short)(AT93CXX_WRAL|0x04)<<9)|0x80;
+#endif
+
+  AT93CXX_SPI_Send_Word(address);
+
+#if MEM_ORG  
+//16位数据存储
+  AT93CXX_SPI_Send_Word(dat);
+
+#else 
+//8位数据存储
+  AT93CXX_SPI_Send_Byte((unsigned char)dat);
+#endif
+   
+    AT93CXX_SCS_L;
+
+	AT93CXX_SCS_H;
+    while(AT93CXX_MISO == 0); //等待写完成
+    AT93CXX_SCS_L;
+}
+
+
+
+
+//**************************************************************************
+//函数名：void AT93CXX_Erase_Dat( unsigned short addr)
+//输入参数：地址
+//输出参数：无
+//功能：擦除指定地址数据
+//****************************************************************************
+void AT93CXX_Erase_Dat( unsigned short addr)
+{
+  unsigned short address;
+  AT93CXX_SCS_H;
+
+#if MEM_ORG  
+//16位数据存储
+  address = ((unsigned short)(AT93CXX_ERASE|0x04)<<8) | addr;
+
+#else
+//8位数据存储 
+  address = ((unsigned short)(AT93CXX_ERASE|0x04)<<9) | addr;
+#endif
+ 
+  AT93CXX_SPI_Send_Word(address);
+
+    AT93CXX_SCS_L;
+
+	AT93CXX_SCS_H;
+    while(AT93CXX_MISO == 0); //等待擦除完成
+    AT93CXX_SCS_L;
+
+
+}
+
+
+//**************************************************************************
+//函数名：void AT93CXX_Erase_All( )
+//输入参数：无
+//输出参数：无
+//功能：擦除所有地址数据
+//****************************************************************************
+void AT93CXX_Erase_All( )
+{
+  unsigned short address;
+  AT93CXX_SCS_H;
+
+#if MEM_ORG  
+//16位数据存储
+  address = ((unsigned short)(AT93CXX_ERAL|0x04)<<8) | 0x80;
+#else
+//8位数据存储 
+  address = ((unsigned short)(AT93CXX_ERAL|0x04)<<9) | 0x100;
+#endif
+  AT93CXX_SPI_Send_Word(address);
+
+    AT93CXX_SCS_L;
+
+	AT93CXX_SCS_H;
+    while(AT93CXX_MISO == 0); //等待擦除完成
+    AT93CXX_SCS_L;
+
+
+}
+
+
+
+
+
+
+
+
+
