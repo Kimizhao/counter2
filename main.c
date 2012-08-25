@@ -3,10 +3,9 @@
  */
 #include "common.h"
 #include "at93c66.h"
+#include "scaner.h"
 
 unsigned char code table[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};//01234567
-unsigned char code arabic[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};/* "0","1","2","3","4","5","6","7","8","9" */
-unsigned char code special[]={0x40,0x08,0x79,0x77,0x7c,0x39,0x5e,0x71,0x3d,0x76};/* "-","_","E","A","b","C","d","F","G","H" */
 unsigned char code seg[]={0,1,2,3,4,5,6,7};//
 
 unsigned char DisThous;
@@ -14,16 +13,36 @@ unsigned char DisHunder;
 unsigned char DisTens;
 unsigned char DisSingle;
 unsigned int curnum;
+unsigned char j;
 unsigned int num;
+unsigned long num2;
 
-//sbit CNUP=P1^0;
-// sbit CNDOWN=P1^1;
-// sbit CNNUN=P1^3;
-//bit newa,newb;
+sbit KEY_UP=P1^6;
+sbit KEY_DOWN=P1^5;
+sbit led=P1^7;
+bit isLowPower;
+bit isFlash;
+
+extern void MBI_Shift_32_bit(unsigned long datal);
 
 void delay(unsigned int cnt)
 {
 	while(--cnt);
+}
+
+void DelayUs2x(unsigned char t)
+{   
+ while(--t);
+}
+
+void DelayMs(unsigned char t)
+{
+     
+ while(t--)
+ {
+     DelayUs2x(245);
+     DelayUs2x(245);
+ }
 }
 
 void Init_Timer0(void)
@@ -33,7 +52,15 @@ void Init_Timer0(void)
 	TL0=0x00;
 	EA=1;                      /* interupt enable */
 	ET0=1;                     /* enable timer0 interrupt */
-	TR0=1;  
+	TR0=1;
+}
+
+void Init_T0(void)
+{
+	//P1=0x55;//P1口初始值
+	EA=1;//全局中断开
+	EX0=1;//外部中断0开
+	IT0=1;//边沿触发
 }
 
 void Init_counter2(void)
@@ -52,42 +79,122 @@ void Init_counter2(void)
 	
 }
 
+
+
 void main(void)
 {
 	unsigned char i;
-	bit cna,cnb;
-	curnum=0;
-	
+	unsigned char key;
 	num=1234;
-
-	DisSingle=table[num%10];
-	DisTens=table[(num/10)%10];
-	DisHunder=table[(num/100)%10];
-	DisThous=table[(num/1000)%10];
+	//Init_Timer0();
+	Init_T0();
 	
-	P0=0x3f;
-	delay(60000);
-
-	//P0=EEPROM_Read(0x00);
-	P2=0;
 	
-/* 	SerialDataOutput(0x06);// "1"
-	SerialDataOutput(0x5b);// "2"
-	SerialDataOutput(0x4f);// "3"
-	SerialDataOutput(0x66);// "4"
-	SerialDataOutput(0x06);// "1" */
-	
-/* 	for (i=0;i<2;i++)
+	AT93CXX_SPI_PORT_INIT();
+ 	for (i=0;i<8;i++)
 	{
-		SerialDataOutput(special[i+8]);
-	} */
+		delay(60000);
+		P0=AT93CXX_Read_Data(i);
+		P2=i;
+	}
+	
+	MBI_Shift_32_bit(1234);
+	num=AT93CXX_Read_Data(0)+AT93CXX_Read_Data(1)*256;
+	P0=table[2];
+	P2=1;
+	delay(60000);
+	P0=table[8];
+	P2=1;
+	delay(60000);
 	
 	while (1)
-	{ }
+	{
+		key=keyscan();
+		switch (key)
+		{
+			delay(200);
+			case 0x7e:
+				MBI_Shift_32_bit(234);
+			break;
+			case 0x7d:
+				MBI_Shift_32_bit(674);
+			break;
+			case 0xdd:
+				num++;
+			break;
+			case 0xdb:
+				num--;
+			break;
+		default:
+			break;
+		}
+		
+		//MBI_Shift_32_bit(num);
+		
+		if (isLowPower)
+		{
+			isLowPower=0;
+			AT93CXX_SPI_PORT_INIT();
+			AT93CXX_EN_Write();
+			AT93CXX_Write_Data(0,num&0x00ff);
+			AT93CXX_Write_Data(1,num>>8);
+
+		}
+		
+ 		if(!KEY_UP)  
+		{
+			DelayMs(10);
+			if(!KEY_UP)     
+			{
+				while (!KEY_UP);
+				{
+					num++;				
+				}
+			}
+		} 
+		
+ 		if(!KEY_DOWN)  
+		{
+			DelayMs(10);
+			if(!KEY_DOWN)     
+			{
+				while (!KEY_DOWN);
+				{
+					num--;
+				}
+			}
+		}
+		
+		if (isFlash)
+		{
+			MBI_Shift_32_bit(10000);
+		}else{
+			MBI_Shift_32_bit(num);
+		}
+	}
 }
 
-void Timer0_isr(void) interrupt 1 using 1
+void ISR_Timer0(void) interrupt 1 using 1
 {
 	TH0=0x00;		/* Init value */
 	TL0=0x00;
+}
+
+void ISR_Timer2(void) interrupt 5 using 1
+{
+	static unsigned char tcn=0;
+	TF2=0;
+	tcn++;
+	if (tcn==50)
+	{
+		tcn=0;
+		isFlash=~isFlash;
+	}
+	
+}
+
+void ISR_LowPower(void) interrupt 0 using 1
+{
+	isLowPower=1;
+	led=~led;
 }

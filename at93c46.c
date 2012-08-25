@@ -3,10 +3,14 @@
 
 #include <stdio.h>
 
-sbit  P1_0  =  P1^0;	 //SCS引脚
-sbit  P1_1  =  P1^1;	 //SCK引脚
-sbit  P1_2  =  P1^2;	 //MOSI引脚
-sbit  P1_3  =  P1^3;	 //MISO引脚
+// sbit  P1_0  =  P1^0;	 //SCS引脚
+// sbit  P1_1  =  P1^1;	 //SCK引脚
+// sbit  P1_2  =  P1^2;	 //MOSI引脚
+// sbit  P1_3  =  P1^3;	 //MISO引脚
+sbit  P1_0  =  P3^4;	 //SCS引脚
+sbit  P1_1  =  P2^2;	 //SCK引脚
+sbit  P1_2  =  P3^5;	 //MOSI引脚
+sbit  P1_3  =  P1^4;	 //MISO引脚
 
 #define AT93CXX_SCS_H     (P1_0 = 1)
 #define AT93CXX_SCS_L     (P1_0 = 0)
