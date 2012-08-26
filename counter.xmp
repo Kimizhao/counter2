@@ -31,11 +31,6 @@
                 <Header RelativePath="AT93C66.H" />
                 <Header RelativePath="C:\KEIL\C51\INC\STDIO.H" />
             </File>
-            <File RelativePath="at93cxx.c">
-                <Header RelativePath="COMMON.H" />
-                <Header RelativePath="C:\KEIL\C51\INC\REG52.H" />
-                <Header RelativePath="C:\KEIL\C51\INC\INTRINS.H" />
-            </File>
             <File RelativePath="keyscan.c">
                 <Header RelativePath="SCANER.H" />
                 <Header RelativePath="COMMON.H" />

@@ -1,5 +1,5 @@
 #include "common.h"
-#include "at93c46.h"
+#include "at93c66.h"
 
 #include <stdio.h>
 
@@ -158,7 +158,7 @@ unsigned short AT93CXX_Read_Data(unsigned short addr)
   address = ((unsigned short)(AT93CXX_READ|0x04)<<8) | addr;
 #else
 //8位数据存储
-  address = ((unsigned short)(AT93CXX_READ|0x04)<<7) | addr;
+  address = ((unsigned short)(AT93CXX_READ|0x04)<<9) | addr;
 #endif
 
   AT93CXX_SPI_Send_Word(address);
@@ -198,7 +198,7 @@ void  AT93CXX_EN_Write( void )
   address = ((unsigned short)(AT93CXX_EWEN|0x04)<<8) | 0xc0;
 #else 
 //8位数据模式
-  address = ((unsigned short)(AT93CXX_EWEN|0x04)<<7) | 0x60;
+  address = ((unsigned short)(AT93CXX_EWEN|0x04)<<9) | 0x180;
 #endif
   AT93CXX_SPI_Send_Word(address);
 
@@ -227,7 +227,7 @@ void  AT93CXX_Erase_Write_Disable( void )
 
 #else
 //8位数据存储 
-  address = ((unsigned short)(AT93CXX_EWDS|0x04)<<7);
+  address = ((unsigned short)(AT93CXX_EWDS|0x04)<<9);
 
 #endif
   AT93CXX_SPI_Send_Word(address);
@@ -255,7 +255,7 @@ void  AT93CXX_Write_Data( unsigned short addr,unsigned short dat )
   address = ((unsigned short)(AT93CXX_WRITE|0x04)<<8) | addr;
 #else
 //8位数据存储 
-  address = ((unsigned short)(AT93CXX_WRITE|0x04)<<7)| addr;
+  address = ((unsigned short)(AT93CXX_WRITE|0x04)<<9)| addr;
 #endif
   
   AT93CXX_SPI_Send_Word(address);
@@ -295,7 +295,7 @@ void AT93CXX_Write_All( unsigned short dat)
   address = ((unsigned short)(AT93CXX_WRAL|0x04)<<8)|0x40;
 #else
 //8位数据存储 
-  address = ((unsigned short)(AT93CXX_WRAL|0x04)<<7)|0x20;
+  address = ((unsigned short)(AT93CXX_WRAL|0x04)<<9)|0x80;
 #endif
 
   AT93CXX_SPI_Send_Word(address);
@@ -336,7 +336,7 @@ void AT93CXX_Erase_Dat( unsigned short addr)
 
 #else
 //8位数据存储 
-  address = ((unsigned short)(AT93CXX_ERASE|0x04)<<7) | addr;
+  address = ((unsigned short)(AT93CXX_ERASE|0x04)<<9) | addr;
 #endif
  
   AT93CXX_SPI_Send_Word(address);
@@ -367,7 +367,7 @@ void AT93CXX_Erase_All( )
   address = ((unsigned short)(AT93CXX_ERAL|0x04)<<8) | 0x80;
 #else
 //8位数据存储 
-  address = ((unsigned short)(AT93CXX_ERAL|0x04)<<7) | 0x40;
+  address = ((unsigned short)(AT93CXX_ERAL|0x04)<<9) | 0x100;
 #endif
   AT93CXX_SPI_Send_Word(address);
 
@@ -379,3 +379,12 @@ void AT93CXX_Erase_All( )
 
 
 }
+
+
+
+
+
+
+
+
+

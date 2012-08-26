@@ -2,26 +2,23 @@
  *
  */
 #include "common.h"
-#include "at93c66.h"
+#include "at93c46.h"
 #include "scaner.h"
 
+#define StartT2	{TR2=1;}
+#define StopT2	{TR2=0;}
 unsigned char code table[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};//01234567
-unsigned char code seg[]={0,1,2,3,4,5,6,7};//
 
-unsigned char DisThous;
-unsigned char DisHunder;
-unsigned char DisTens;
-unsigned char DisSingle;
-unsigned int curnum;
-unsigned char j;
 unsigned int num;
-unsigned long num2;
+sbit CNT_INC=P1^0;
+sbit CNT_DEC=P1^1;
+sbit CTR=P1^2;
+sbit CTG=P1^3;
 
-sbit KEY_UP=P1^6;
-sbit KEY_DOWN=P1^5;
 sbit led=P1^7;
 bit isLowPower;
-bit isFlash;
+bit isTimer2Out;
+bit isStartFlash;
 
 extern void MBI_Shift_32_bit(unsigned long datal);
 
@@ -32,17 +29,22 @@ void delay(unsigned int cnt)
 
 void DelayUs2x(unsigned char t)
 {   
- while(--t);
+	while(--t);
 }
 
 void DelayMs(unsigned char t)
 {
-     
- while(t--)
- {
-     DelayUs2x(245);
-     DelayUs2x(245);
- }
+	while(t--)
+	{
+		DelayUs2x(245);
+		DelayUs2x(245);
+	}
+}
+
+void Init_Ports(void)
+{
+	CTG=HIGHT;
+	CTR=HIGHT;
 }
 
 void Init_Timer0(void)
@@ -63,6 +65,15 @@ void Init_T0(void)
 	IT0=1;//边沿触发
 }
 
+void Init_Timer2(void)
+{
+	RCAP2H = (65536-60000)/256;//@12M 10ms 16bit 自动重载
+	RCAP2L = (65536-60000)%256;
+	ET2=1;//中断允许位
+	EA=1;
+	//TR2=0;//启动/关闭timer2
+}
+
 void Init_counter2(void)
 {
 	RCAP2H = (65536-60000)/256;//@12M 10ms 16bit 自动重载
@@ -79,37 +90,38 @@ void Init_counter2(void)
 	
 }
 
-
-
 void main(void)
 {
 	unsigned char i;
 	unsigned char key;
-	num=1234;
+	//num=1234;
 	//Init_Timer0();
 	Init_T0();
+	Init_Timer2();
 	
 	
 	AT93CXX_SPI_PORT_INIT();
- 	for (i=0;i<8;i++)
+/*  	for (i=0;i<8;i++)
 	{
 		delay(60000);
 		P0=AT93CXX_Read_Data(i);
 		P2=i;
-	}
+	} */
 	
-	MBI_Shift_32_bit(1234);
+	//MBI_Shift_32_bit(1234);
 	num=AT93CXX_Read_Data(0)+AT93CXX_Read_Data(1)*256;
-	P0=table[2];
+/* 	P0=table[2];
 	P2=1;
 	delay(60000);
 	P0=table[8];
 	P2=1;
-	delay(60000);
+	delay(60000); */
+	
+	isStartFlash=1;
 	
 	while (1)
 	{
-		key=keyscan();
+		/* key=keyscan();
 		switch (key)
 		{
 			delay(200);
@@ -121,13 +133,15 @@ void main(void)
 			break;
 			case 0xdd:
 				num++;
+				StartT2;
 			break;
 			case 0xdb:
+				StopT2;
 				num--;
 			break;
 		default:
 			break;
-		}
+		} */
 		
 		//MBI_Shift_32_bit(num);
 		
@@ -138,34 +152,44 @@ void main(void)
 			AT93CXX_EN_Write();
 			AT93CXX_Write_Data(0,num&0x00ff);
 			AT93CXX_Write_Data(1,num>>8);
-
 		}
 		
- 		if(!KEY_UP)  
+ 		if(!CNT_INC)  
 		{
 			DelayMs(10);
-			if(!KEY_UP)     
+			if(!CNT_INC)     
 			{
-				while (!KEY_UP);
+				while (!CNT_INC);
 				{
-					num++;				
+					if (CTG)
+					{
+						num++;
+					}
 				}
 			}
 		} 
 		
- 		if(!KEY_DOWN)  
+ 		if(!CNT_DEC)  
 		{
 			DelayMs(10);
-			if(!KEY_DOWN)     
+			if(!CNT_DEC)     
 			{
-				while (!KEY_DOWN);
+				while (!CNT_DEC);
 				{
-					num--;
+					if (CTG)
+					{
+						num--;
+					}
 				}
 			}
 		}
 		
-		if (isFlash)
+		if (CTR!=1)
+		{
+			num=0;
+		}
+		
+		if (isTimer2Out)
 		{
 			MBI_Shift_32_bit(10000);
 		}else{
@@ -185,10 +209,11 @@ void ISR_Timer2(void) interrupt 5 using 1
 	static unsigned char tcn=0;
 	TF2=0;
 	tcn++;
-	if (tcn==50)
+	if (tcn==20)
 	{
 		tcn=0;
-		isFlash=~isFlash;
+		isTimer2Out=~isTimer2Out;
+		led=~led;
 	}
 	
 }

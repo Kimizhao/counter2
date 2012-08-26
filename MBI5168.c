@@ -23,6 +23,11 @@ sbit MBI_LE=P2^6;
 //===================================================
 char Few_Digits(unsigned long data2)
 {
+	if (data2==65535)
+	{
+		return 0;
+	}
+	
 	if (data2>999)
 	{
 		if (data2==10000)
