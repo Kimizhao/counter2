@@ -161,3 +161,10 @@ pip-log.txt
 
 # Mac crap
 .DS_Store
+
+# C51 obj
+*.OBJ
+*.LST
+counter.hex
+DebugRel/
+counter

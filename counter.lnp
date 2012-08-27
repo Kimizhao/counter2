@@ -1,0 +1,6 @@
+"STARTUP.obj",
+"MBI5168.obj",
+"main.obj",
+"at93c46.obj" 
+TO "counter" 
+RAMSIZE(256) 
