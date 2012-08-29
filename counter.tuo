@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="Windows-1252" ?>
 <TKStudioOptions Version="3.00" Author="YinHandong[Òüº®¶¬]">
-    <Projects OPTPES="96,96,66,0,0,0,0,0,0,0,0,0,0,96,0,0,0,0,0,64,0,0,0,0,0,">
+    <Projects OPTPES="96,96,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,">
         <Project ProjectGUID="{1C577B6D-CBF6-4d35-BD15-6EE86F560CB0}" Name="counter" ACTCFG="DebugRel">
             <TARGOPT Name="DebugRel" OPTDF="1">
-                <OPTFFF VAL="&lt;.\main.c&gt; {2,3,-1,-1,75,75,1003,346,206,305}" />
+                <OPTFFF VAL="&lt;..\..\..\..\keil\c51\inc\reg52.h&gt; {0,1,-1,-1,75,75,1003,346,56,1338}" />
+                <OPTFFF VAL="&lt;.\main.c&gt; {0,1,-1,-1,75,75,1003,346,3,280}" />
+                <OPTFFF VAL="&lt;.\at93c46.c&gt; {0,1,-1,-1,75,75,1003,346,0,277}" />
+                <OPTFFF VAL="&lt;.\mbi5168.c&gt; {2,3,-1,-1,75,75,1003,346,83,1761}" />
             </TARGOPT>
         </Project>
     </Projects>

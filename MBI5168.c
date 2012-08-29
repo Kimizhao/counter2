@@ -1,7 +1,7 @@
 #include "common.h"
 
 unsigned char code arabic[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};/* "0","1","2","3","4","5","6","7","8","9" */
-unsigned char code special[]={0x00,0x40,0x08,0x79,0x77,0x7c,0x39,0x5e,0x71,0x3d,0x76};/* " ","-","_","E","A","b","C","d","F","G","H" */
+unsigned char code special[]={0x00,0x80,0x40,0x08,0x79,0x77,0x7c,0x39,0x5e,0x71,0x3d,0x76};/* " ",",","-","_","E","A","b","C","d","F","G","H" */
 sbit MBI_SDI=P2^5;
 sbit MBI_CLK=P2^7;
 sbit MBI_LE=P2^6;
@@ -21,7 +21,7 @@ sbit MBI_LE=P2^6;
 #define shift_data_0 {MBI_SDI=LOW;}
 
 //===================================================
-char Few_Digits(unsigned long data2)
+unsigned char Few_Digits(unsigned long data2)
 {
 	if (data2==65535)
 	{

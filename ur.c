@@ -1,25 +1,9 @@
-/*
- *
- */
-#include "common.h"
-#include "at93c46.h"
-#include "scaner.h"
 
-#define StartT2	{ET2=1;TR2=1;}
-#define StopT2	{ET2=0;TR2=0;}
-unsigned char code table[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};
-unsigned int num;
-sbit CNT_INC=P1^0;
-sbit CNT_DEC=P1^1;
-sbit CTR=P1^2;
-sbit CTG=P1^3;
-sbit Led1=P2^3;
-sbit Led2=P2^4;
-bit isLowPower;
-bit isTimer2Out;
-bit isTimer2Start;
-bit isFlashSet;
-//----
+
+#include <reg52.h> 
+#include <intrins.h>
+#include "DS12C887.H"
+
 #define F_ST 0x02
 #define F_R 0x72            //帧类型 r 继电器
 #define F_W 0x77            //帧类型 w 写counter 
@@ -30,106 +14,24 @@ bit isFlashSet;
 #define SY 0x30               //不闪
 #define NS 0x31     //闪    
 #define dian  0x2e  // 小数点
-#define F_SPACE 0x20        //空标志             0
+#define F_SPACE 0x20        //空标志             0 
 
 sbit P2A=P2^0;
 sbit P2B=P2^1;
+
 //public 变量 
 unsigned char D[6]; 
 unsigned char qq[]={"OKNG"};
 unsigned char CF[]={"CF10"};
 unsigned char F_ST1=0x32;          //高位标志           2 
 unsigned char F_ST2=0x33;          //低位标志           3 
-unsigned long counter;
-unsigned char R;
-bit R1,R2,R3,R4,R5,R6;
+unsigned long int   counter=978355;
+unsigned char R,R1,R2,R3,R4,R5,R6;
 unsigned char RSHAN,XSHAN;
 unsigned char BR;//波特率
-//----
-
-extern void MBI_Shift_32_bit(unsigned long datal);
-
-
-
-void delay(unsigned int cnt)
-{
-	while(--cnt);
-}
-
-void DelayUs2x(unsigned char t)
-{   
-	while(--t);
-}
-
-void DelayMs(unsigned char t)
-{
-	while(t--)
-	{
-		DelayUs2x(245);
-		DelayUs2x(245);
-	}
-}
-
-void Init_Ports(void)
-{
-	CTG=HIGHT;
-	CTR=HIGHT;
-}
-
-void Init_Timer0(void)
-{
-	TMOD |= 0x01;			     
-	TH0=0x00;	              	/* Init value */
-	TL0=0x00;
-	EA=1;                      /* interupt enable */
-	ET0=1;                     /* enable timer0 interrupt */
-	TR0=1;
-}
-
-
-void Init_T0(void)
-{
-	//P1=0x55;//P1口初始值
-	EA=1;//全局中断开
-	EX0=1;//外部中断0开
-	IT0=1;//边沿触发
-}
-
-void Init_Timer2(void)
-{
-	RCAP2H = (65536-60000)/256;//@12M 10ms 16bit 自动重载
-	RCAP2L = (65536-60000)%256;
-	ET2=0;//中断允许位
-	EA=1;
-	TR2=0;//启动/关闭timer2
-}
-
-void Start_Timer2(void)
-{
-	RCAP2H = (65536-60000)/256;//@12M 10ms 16bit 自动重载
-	RCAP2L = (65536-60000)%256;
-	ET2=1;//中断允许位
-	EA=1;
-	TR2=1;//启动/关闭timer2
-}
-
-void Init_counter2(void)
-{
-	RCAP2H = (65536-60000)/256;//@12M 10ms 16bit 自动重载
-	RCAP2L = (65536-60000)%256;
-	
-	//T2MOD
-	//T2MOD|=0x00;???
-	T2MOD|=0x01;//定时器2输入使能位：0 向下计数使能位：1
-	
-	//T2CON
-	C_T2=1; //外部脉冲计数
-	EXEN2=1; //关闭T2Ex跳变有效位
-	TR2=1; //counter2开始工作
-	
-}
-
-//---------------------------------------------------
+unsigned char code seg[]={0,1,2,3,4,5,6,7};//分别对应相应的数码管点亮
+unsigned char const dofly[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};// 显示段码值01234567
+extern unsigned char Date_Time[7];
 
 //char code str[] = "you are the best! \n\r";
 //函数 
@@ -281,6 +183,8 @@ F_ST2=HexToChar(F_ST2);
 P2A=1;
 P2B=1;
 BR=P0;
+P2A=1;
+P2B=0;
 }
 
 ///////////////////////////////////////////////////////////////////// 
@@ -324,156 +228,6 @@ counter=counter*10+D[1+i];
 
 }
 
-
-//---------------------------------------------------
-
-void main(void)
-{
-	unsigned char i;
-	unsigned char key;
-	bit curFlashSet=0;
-	//num=1234;
-	//Init_Timer0();
-	Id_SET();
-	Init_T0();
-	Init_Timer2();
-	com_init(BR);
-	isFlashSet=0;
-	isTimer2Start=0;
-	R1=0;
-	R2=0;
-	
-	
-	AT93CXX_SPI_PORT_INIT();
-/*  	for (i=0;i<8;i++)
-	{
-		delay(60000);
-		P0=AT93CXX_Read_Data(i);
-		P2=i;
-	} */
-	
-	//MBI_Shift_32_bit(1234);
-	counter=AT93CXX_Read_Data(0)+AT93CXX_Read_Data(1)*256;
-/* 	P0=table[2];
-	P2=1;
-	delay(60000);
-	P0=table[8];
-	P2=1;
-	delay(60000); */
-	
-	while (1)
-	{
-		/* key=keyscan();
-		switch (key)
-		{
-			delay(200);
-			case 0x7e:
-				MBI_Shift_32_bit(234);
-			break;
-			case 0x7d:
-				MBI_Shift_32_bit(674);
-			break;
-			case 0xdd:
-				num++;
-				StartT2;
-			break;
-			case 0xdb:
-				StopT2;
-				num--;
-			break;
-		default:
-			break;
-		} */
-		
-		//MBI_Shift_32_bit(num);
-		
-		if (isLowPower)
-		{
-			isLowPower=0;
-			AT93CXX_SPI_PORT_INIT();
-			AT93CXX_EN_Write();
-			AT93CXX_Write_Data(0,counter&0x00ff);
-			AT93CXX_Write_Data(1,counter>>8);
-		}
-		
- 		if(!CNT_INC)  
-		{
-			DelayMs(10);
-			if(!CNT_INC)     
-			{
-				while (!CNT_INC);
-				{
-					if (CTG)
-					{
-						counter++;
-					}
-				}
-			}
-		} 
-		
- 		if(!CNT_DEC)  
-		{
-			DelayMs(10);
-			if(!CNT_DEC)     
-			{
-				while (!CNT_DEC);
-				{
-					if (CTG)
-					{
-						counter--;
-					}
-				}
-			}
-		}
-		
-		if (CTR!=1)
-		{
-			counter=0;
-		}
-		
-		if (isTimer2Out&&isFlashSet)
-		{
-			MBI_Shift_32_bit(10000);
-		}else{
-			MBI_Shift_32_bit(F_ST2);
-		}
-		
-		if (isTimer2Out&&isTimer2Start)
-		{
-			if(R1==1)Led1=0;
-			if(R2==1)Led2=0;
-		}else{
-			if(R1==1)Led1=1;
-			if(R2==1)Led2=1;
-		}
-	}
-}
-
-void ISR_Timer0(void) interrupt 1 using 1
-{
-	TH0=0x00;		/* Init value */
-	TL0=0x00;
-}
-
-void ISR_Timer2(void) interrupt 5 using 1
-{
-	static unsigned char tcn=0;
-	TF2=0;
-	tcn++;
-	if (tcn==10)
-	{
-		tcn=0;
-		isTimer2Out=~isTimer2Out;
-	}
-	
-}
-
-void ISR_LowPower(void) interrupt 0 using 1
-{
-	isLowPower=1;
-}
-
-
 ///////////////////////////////////////////////////////////////////// 
 //函 数 名：com_int() 
 //功能描述：串口中断 
@@ -484,8 +238,6 @@ void ISR_LowPower(void) interrupt 0 using 1
 void com_int()interrupt 4{ 
 unsigned char i,csum,st,mici,end; 
 csum=0; 
-
-//isFlashSet=0;
  
 if(RI == 1){
 RI = 0;
@@ -519,23 +271,13 @@ if(receive()==F_ST1){             //是侦
                            XSHAN=receive();
 						   if(XSHAN==0X30) //继电器不动作 不闪烁
 							{
-								//R5=0;
-								//P1=0x04;
-								if (isFlashSet!=0)
-								{
-									StopT2;
-									isFlashSet=0;
-								}	
+								R5=0;
+							//	P1=0x04;
 							}
 							if(XSHAN==0X31) //动作继电器 2HZ闪烁
 							{
-							    //R5=1;
-								//P1=0x08;
-								if (isFlashSet!=1)
-								{
-									StartT2;
-									isFlashSet=1;
-								}
+							    R5=1;
+							//P1=0x08;
 							}
 
                          end=CharToHex(receive())<<4;
@@ -584,39 +326,26 @@ if(receive()==F_ST1){             //是侦
 				end+=CharToHex(receive()); 
                 if(end==F_END)//结束标志正确 
 				{
+					//P1=0x01;
 					if(R==0X30)// 选择R1
 					{
-						//R1=1;
-						//P1=0x01;
-						R1=1;
-						R2=0;
+					R1=1;
+				//	P1=0x01;
 					}
 					if(R==0X31)//选择R2
 					{
-						//R2=1;
-						//P1=0x02;
-						R1=0;
-						R2=1;
+					R2=1;
+					//P1=0x02;
 					}
 					if(RSHAN==0X30) //继电器不动作 不闪烁
 					{
-						R3=1;
-						//P1=0x04;
-						if (isTimer2Start!=0)
-						{
-							StopT2;
-							isTimer2Start=0;
-						}
+					R3=1;
+				//	P1=0x04;
 					}
 					if(RSHAN==0X31) //动作继电器 2HZ闪烁
 					{
-						//R4=1;
-						//P1=0x08;
-						if (isTimer2Start!=1)
-						{
-							StartT2;
-							isTimer2Start=1;
-						}
+					R4=1;
+					//P1=0x08;
 					}
 				}
 
@@ -633,3 +362,42 @@ if(receive()==F_ST1){             //是侦
 else{ TI = 0; }
 
 } 
+///////////////////////////////////////////////////////////////// 
+
+//主函数 
+
+///////////////////////////////////////////////////////////////// 
+void main(void){ 
+//Id_SET();
+com_init(8);
+//P1=0x32; 
+//send(F_ST1);
+WriteDs12887();
+
+
+while(1)
+{
+       ReadDs127887();
+	   P0=dofly[(Date_Time[6]/10)];//取显示数据
+	   P2=seg[0];  //取段码
+	   delay(5); //扫描间隙延时
+	   P0=dofly[(Date_Time[6]%10)];//取显示数据
+	   P2=seg[1];  //取段码
+	   delay(5); //扫描间隙延时
+	   P0=dofly[(Date_Time[5]/10)];//取显示数据
+	   P2=seg[2];  //取段码
+	   delay(5); //扫描间隙延时
+	   P0=dofly[(Date_Time[5]%10)];//取显示数据
+	   P2=seg[3];  //取段码
+	   delay(5); //扫描间隙延时
+	   P0=dofly[(Date_Time[4]/10)];//取显示数据
+	   P2=seg[4];  //取段码
+	   delay(5); //扫描间隙延时
+	   P0=dofly[(Date_Time[4]%10)];//取显示数据
+	   P2=seg[5];  //取段码
+	   delay(5); //扫描间隙延时	   	  	   
+}
+} 
+
+
+
